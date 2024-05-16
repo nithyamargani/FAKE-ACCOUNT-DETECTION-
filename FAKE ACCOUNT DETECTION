@@ -1,0 +1,538 @@
+# Import Libraries
+import numpy as num
+import pandas as pd
+import matplotlib.pyplot as graph
+import seaborn as sb
+import sys
+import warnings
+if not sys.warnoptions:
+    warnings.simplefilter("ignore")
+
+#To check Performances
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import precision_score
+from sklearn.metrics import recall_score
+from sklearn.metrics import f1_score
+
+def evaluateModel(input_data , algo_output):
+    Modelacc = accuracy_score(input_data , algo_output) * 100
+    modelpreci = precision_score(input_data , algo_output) * 100
+    ModelRecal = recall_score(input_data , algo_output) * 100
+    finalscore = f1_score(input_data , algo_output, average='weighted')
+    print('Modelacc is {:.4f}%\n ModelPrecision is {:.4f}%\n ModelRecall is {:.4f}%\nModelF1 Score is {:.4f}\n'.format(Modelacc, modelpreci, ModelRecal, finalscore))
+
+# Set Data
+Features_labels = pd.read_csv("Botdataset.csv")
+Label_B = Features_labels[Features_labels.bot==1]
+Lable_NB = Features_labels[Features_labels.bot==0]
+
+Features_labels.columns
+
+Features_labels.head(10)
+
+Features_labels.describe()
+
+DatasetFeatureNames = ['id', 'id_str', 'screen_name', 'location', 'description', 'url',
+       'followers_count', 'friends_count', 'listed_count', 'created_at',
+       'favourites_count', 'verified', 'statuses_count', 'lang', 'status',
+       'default_profile', 'default_profile_image', 'has_extended_profile',
+       'name', 'bot']
+
+maskingdata = num.zeros_like(Features_labels[DatasetFeatureNames].corr(), dtype = num.bool) 
+maskingdata[num.triu_indices_from(maskingdata)] = True 
+
+f, ax = graph.subplots(figsize=(16, 12))
+graph.title('Pearson Correlation Matrix',fontsize=25)
+
+sb.heatmap(Features_labels[DatasetFeatureNames].corr(),linewidths = 0.25,vmax = 0.7,square = True,cmap = "BuGn", 
+            linecolor = 'w',annot = True,annot_kws = {"size":8},mask = maskingdata,cbar_kws = {"shrink": 0.9})
+
+Features_labels.drop(['id_str', 'screen_name', 'location', 'description', 'url', 'created_at', 'lang', 'status', 'has_extended_profile','name'],axis=1,inplace=True)
+
+Features_labels.head()
+
+sb.catplot(x="bot", y="followers_count", data=Features_labels);
+sb.catplot(x="bot", y="friends_count", data=Features_labels);
+sb.catplot(x="bot", y="listed_count", data=Features_labels);
+
+sb.catplot(x="bot", y="favourites_count", data=Features_labels);
+sb.catplot(x="bot", y="verified", data=Features_labels);
+sb.catplot(x="bot", y="statuses_count", data=Features_labels);
+
+featuredata_X = Features_labels.iloc[:, :-1].values
+Labeldata_y= Features_labels.iloc[:, 9].values
+
+from sklearn.preprocessing import LabelEncoder
+trainx=LabelEncoder()
+featuredata_X[:,5]=trainx.fit_transform(featuredata_X[:,5])
+featuredata_X[:,7]=trainx.fit_transform(featuredata_X[:,7])
+featuredata_X[:,8]=trainx.fit_transform(featuredata_X[:,8])
+
+# KNN
+
+from sklearn.neighbors import KNeighborsClassifier as knn
+knnclassifier=knn(n_neighbors=5)
+knnclassifier.fit(featuredata_X,Labeldata_y)
+Label_B = Features_labels[Features_labels.bot==1]
+Lable_NB = Features_labels[Features_labels.bot==0]
+ 
+knn_feature = Label_B.iloc[:,:-1]
+knnlablel_y = Label_B.iloc[:,9]
+knn_prediction = knnclassifier.predict(knn_feature)
+
+#Confusionmatrix
+from sklearn.metrics import confusion_matrix
+cm=confusion_matrix(knnlablel_y,knn_prediction)
+evaluateModel(knnlablel_y,knn_prediction)
+
+feature_NB = Lable_NB.iloc[:,:-1]
+label_NB_y = Lable_NB.iloc[:,9]
+KNn_NB_pred = knnclassifier.predict(feature_NB)
+
+#Confusionmatrix
+from sklearn.metrics import confusion_matrix
+cm=confusion_matrix(label_NB_y,KNn_NB_pred)
+evaluateModel(label_NB_y,KNn_NB_pred)
+
+
+
+from sklearn.naive_bayes import GaussianNB as GNB
+classifier=GNB()
+classifier.fit(featuredata_X,Labeldata_y)
+Label_B = Features_labels[Features_labels.bot==1]
+Lable_NB = Features_labels[Features_labels.bot==0]
+ 
+GNNBFeature = Label_B.iloc[:,:-1]
+GNNBLabel = Label_B.iloc[:,9]
+GNNB_pred = classifier.predict(GNNBFeature)
+
+#Confusionmatrix
+from sklearn.metrics import confusion_matrix
+cm=confusion_matrix(GNNBLabel,GNNB_pred)
+evaluateModel(GNNBLabel,GNNB_pred)
+
+GNNB_NB = Lable_NB.iloc[:,:-1]
+GNNB_NB_y = Lable_NB.iloc[:,9]
+GNNB_NB_pred = classifier.predict(GNNB_NB)
+
+#Confusionmatrix
+from sklearn.metrics import confusion_matrix
+cm=confusion_matrix(GNNB_NB_y,GNNB_NB_pred)
+evaluateModel(GNNB_NB_y,GNNB_NB_pred)
+
+#fitting
+from sklearn.ensemble import RandomForestClassifier as rf
+classifier= rf(n_estimators=10,criterion='entropy',random_state=0)
+classifier.fit(featuredata_X,Labeldata_y)
+Label_B = Features_labels[Features_labels.bot==1]
+Lable_NB = Features_labels[Features_labels.bot==0]
+
+RFC_Feature = Label_B.iloc[:,:-1]
+RFC_Label = Label_B.iloc[:,9]
+RFC_pred = classifier.predict(RFC_Feature)
+
+#Confusionmatrix
+from sklearn.metrics import confusion_matrix
+cm=confusion_matrix(RFC_Label,RFC_pred)
+evaluateModel(RFC_Label,RFC_pred)
+
+RFC_Feature_NB = Lable_NB.iloc[:,:-1]
+RFC_Label_NB_y = Lable_NB.iloc[:,9]
+RFC_NB_pred = classifier.predict(RFC_Feature_NB)
+ 
+#Confusionmatrix
+from sklearn.metrics import confusion_matrix
+cm=confusion_matrix(RFC_Label_NB_y,RFC_NB_pred)
+evaluateModel(RFC_Label_NB_y,RFC_NB_pred)
+
+from sklearn.tree import DecisionTreeClassifier as DTC
+classifier= DTC(criterion="entropy")
+classifier.fit(featuredata_X,Labeldata_y)
+Label_B = Features_labels[Features_labels.bot==1]
+Lable_NB = Features_labels[Features_labels.bot==0]
+ 
+DT_Feature_B = Label_B.iloc[:,:-1]
+DT_Label_B = Label_B.iloc[:,9]
+DT_B_pred = classifier.predict(DT_Feature_B)
+
+#Confusionmatrix
+from sklearn.metrics import confusion_matrix
+cm=confusion_matrix(DT_Label_B,DT_B_pred)
+evaluateModel(DT_Label_B,DT_B_pred)
+
+DT_Feature_NB = Lable_NB.iloc[:,:-1]
+DT_Label_NB_y = Lable_NB.iloc[:,9]
+DT_NB_pred = classifier.predict(DT_Feature_NB)
+
+#Confusionmatrix
+from sklearn.metrics import confusion_matrix
+cm=confusion_matrix(DT_Label_NB_y,DT_NB_pred)
+evaluateModel(DT_Label_NB_y,DT_NB_pred)
+
+
+from sklearn.datasets import make_classification
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import roc_curve
+from sklearn.metrics import roc_auc_score
+from matplotlib import pyplot
+from sklearn.metrics import precision_recall_curve
+from sklearn.metrics import f1_score
+from sklearn.metrics import auc
+
+Feature_X, Labels_y = make_classification(n_samples=1000, n_classes=2, random_state=1)
+LR_train_Features, LR_test_Features, LR_train_Labels, LR_test_Labels = train_test_split(Feature_X, Labels_y, test_size=0.3, random_state=2)
+LR_Prob = [0 for _ in range(len(LR_test_Labels))]
+LRmodel = LogisticRegression(solver='lbfgs')
+LRmodel.fit(LR_train_Features, LR_train_Labels)
+logistic_probs = LRmodel.predict_proba(LR_test_Features)
+logistic_probs = logistic_probs[:, 1]
+lR_Prb_auc = roc_auc_score(LR_test_Labels, LR_Prob)
+lr_auc = roc_auc_score(LR_test_Labels, logistic_probs)
+print('No Skill: ROC AUC=%.3f' % (lR_Prb_auc))
+print('Logistic: ROC AUC=%.3f' % (lr_auc))
+LR_Prob_fpr, LR_Prob_tpr, _ = roc_curve(LR_test_Labels, LR_Prob)
+lr_fpr, lr_tpr, _ = roc_curve(LR_test_Labels, logistic_probs)
+pyplot.plot(LR_Prob_fpr, LR_Prob_tpr, linestyle='--', label='No Skill')
+pyplot.plot(lr_fpr, lr_tpr, marker='.', label='Logistic')
+pyplot.xlabel('False Positive Rate')
+pyplot.ylabel('True Positive Rate')
+pyplot.legend()
+pyplot.show()
+
+LR_model_predict = LRmodel.predict(LR_test_Features)
+lr_precision, lr_recall, _ = precision_recall_curve(LR_test_Labels, logistic_probs)
+lr_f1, lr_auc = f1_score(LR_test_Labels, LR_model_predict), auc(lr_recall, lr_precision)
+print('Logistic: f1=%.3f auc=%.3f' % (lr_f1, lr_auc))
+no_skill = len(LR_test_Labels[LR_test_Labels==1]) / len(LR_test_Labels)
+pyplot.plot([0, 1], [no_skill, no_skill], linestyle='--', label='No Skill')
+pyplot.plot(lr_recall, lr_precision, marker='.', label='Logistic')
+pyplot.xlabel('Recall')
+pyplot.ylabel('Precision')
+pyplot.legend()
+pyplot.show()
+matrix_result = confusion_matrix(y_true=LR_test_Labels, y_pred=LR_model_predict)
+fig, ax = graph.subplots(figsize=(5, 5))
+ax.matshow(matrix_result, cmap=graph.cm.Oranges, alpha=0.3)
+for i in range(matrix_result.shape[0]):
+    for j in range(matrix_result.shape[1]):
+        ax.text(x=j, y=i,s=matrix_result[i, j], va='center', ha='center', size='xx-large')
+ 
+graph.xlabel('Predictions', fontsize=18)
+graph.ylabel('Actuals', fontsize=18)
+graph.title('Confusion Matrix', fontsize=18)
+graph.show()
+
+evaluateModel(LR_test_Labels,LR_model_predict)
+
+# roc curve and auc
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import roc_curve
+from sklearn.metrics import roc_auc_score
+from matplotlib import pyplot
+from sklearn.neighbors import KNeighborsClassifier as knn
+
+# generate 2 class dataset
+knnfeatures, knnlabels = make_classification(n_samples=1000, n_classes=2, random_state=1)
+# split into train/test sets
+knn_features_train, knn_features_test, knn_label_train, knn_label_test = train_test_split(knnfeatures, knnlabels, test_size=0.5, random_state=2)
+# generate a no skill prediction (majority class)
+ns_probs = [0 for _ in range(len(knn_label_test))]
+# fit a model
+model=knn(n_neighbors=5)
+model.fit(knn_features_train, knn_label_train)
+# predict probabilities
+KNN_probs = model.predict_proba(knn_features_test)
+# keep probabilities for the positive outcome only
+KNN_probs = KNN_probs[:, 1]
+# calculate scores
+KNN_prob_auc = roc_auc_score(knn_label_test, ns_probs)
+KNN_auc = roc_auc_score(knn_label_test, KNN_probs)
+# summarize scores
+print('No Skill: ROC AUC=%.3f' % (KNN_prob_auc))
+print('KNN: ROC AUC=%.3f' % (KNN_auc))
+# calculate roc curves
+KNN_fpr, KNN_tpr, _ = roc_curve(knn_label_test, ns_probs)
+KNN_fpr, KNN_tpr, _ = roc_curve(knn_label_test, KNN_probs)
+# plot the roc curve for the model
+pyplot.plot(KNN_fpr, KNN_tpr, linestyle='--', label='No Skill')
+pyplot.plot(KNN_fpr, KNN_tpr, marker='.', label='KNN')
+# axis labels
+pyplot.xlabel('False Positive Rate')
+pyplot.ylabel('True Positive Rate')
+# show the legend
+pyplot.legend()
+# show the plot
+pyplot.show()
+KNN_Model_predict = model.predict(knn_features_test)
+KNN_precision, KNN_recall, _ = precision_recall_curve(knn_label_test, KNN_probs)
+KNN_f1, KNN_auc = f1_score(knn_label_test, KNN_Model_predict), auc(KNN_recall, KNN_precision)
+# summarize scores
+print('Logistic: f1=%.3f auc=%.3f' % (KNN_f1, KNN_auc))
+# plot the precision-recall curves
+no_skill = len(knn_label_test[knn_label_test==1]) / len(knn_label_test)
+pyplot.plot([0, 1], [no_skill, no_skill], linestyle='--', label='No Skill')
+pyplot.plot(KNN_recall, KNN_precision, marker='.', label='Logistic')
+# axis labels
+pyplot.xlabel('Recall')
+pyplot.ylabel('Precision')
+# show the legend
+pyplot.legend()
+# show the plot
+pyplot.show()
+
+KNN_Matrix = confusion_matrix(y_true=knn_label_test, y_pred=KNN_Model_predict)
+#
+# Print the confusion matrix using Matplotlib
+#
+fig, ax = graph.subplots(figsize=(5, 5))
+ax.matshow(KNN_Matrix, cmap=graph.cm.Oranges, alpha=0.3)
+for i in range(KNN_Matrix.shape[0]):
+    for j in range(KNN_Matrix.shape[1]):
+        ax.text(x=j, y=i,s=KNN_Matrix[i, j], va='center', ha='center', size='xx-large')
+ 
+graph.xlabel('Predictions', fontsize=18)
+graph.ylabel('Actuals', fontsize=18)
+graph.title('Confusion Matrix', fontsize=18)
+graph.show()
+
+evaluateModel(knn_label_test,KNN_Model_predict)
+
+# roc curve and auc
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import roc_curve
+from sklearn.metrics import roc_auc_score
+from matplotlib import pyplot
+from sklearn.svm import SVC
+
+# generate 2 class dataset
+SVCFeatures, SVCLabels = make_classification(n_samples=1000, n_classes=2, random_state=1)
+# split into train/test sets
+SVCtrainFeatures, SVCtestfeatures, SVCtrainlabels, SVCtestlabels = train_test_split(SVCFeatures, SVCLabels, test_size=0.5, random_state=2)
+# generate a no skill prediction (majority class)
+ns_probs = [0 for _ in range(len(SVCtestlabels))]
+# fit a model
+svcmodel=SVC(kernel='rbf', random_state=0,probability=True)
+svcmodel.fit(SVCtrainFeatures, SVCtrainlabels)
+# predict probabilities
+svc_probs = svcmodel.predict_proba(SVCtestfeatures)
+# keep probabilities for the positive outcome only
+svc_probs = svc_probs[:, 1]
+# calculate scores
+svc_prob_acc = roc_auc_score(SVCtestlabels, ns_probs)
+svc_auc = roc_auc_score(SVCtestlabels, svc_probs)
+# summarize scores
+print('No Skill: ROC AUC=%.3f' % (svc_prob_acc))
+print('SVC: ROC AUC=%.3f' % (svc_auc))
+# calculate roc curves
+svc_fpr, svc_tpr, _ = roc_curve(SVCtestlabels, ns_probs)
+sv_fpr, sv_tpr, _ = roc_curve(SVCtestlabels, svc_probs)
+# plot the roc curve for the model
+pyplot.plot(svc_fpr, svc_tpr, linestyle='--', label='No Skill')
+pyplot.plot(sv_fpr, sv_tpr, marker='.', label='SVC')
+# axis labels
+pyplot.xlabel('False Positive Rate')
+pyplot.ylabel('True Positive Rate')
+# show the legend
+pyplot.legend()
+# show the plot
+pyplot.show()
+
+svcmodelpredict = svcmodel.predict(SVCtestfeatures)
+svc_precision, svc_recall, _ = precision_recall_curve(SVCtestlabels, svc_probs)
+svc_f1, svc_auc = f1_score(SVCtestlabels, svcmodelpredict), auc(svc_recall, svc_precision)
+# summarize scores
+print('SVC: f1=%.3f auc=%.3f' % (svc_f1, svc_auc))
+# plot the precision-recall curves
+no_skill = len(SVCtestlabels[SVCtestlabels==1]) / len(SVCtestlabels)
+pyplot.plot([0, 1], [no_skill, no_skill], linestyle='--', label='No Skill')
+pyplot.plot(svc_recall, svc_precision, marker='.', label='SVC')
+# axis labels
+pyplot.xlabel('Recall')
+pyplot.ylabel('Precision')
+# show the legend
+pyplot.legend()
+# show the plot
+pyplot.show()
+
+svc_con_matrix = confusion_matrix(y_true=SVCtestlabels, y_pred=svcmodelpredict)
+#
+# Print the confusion matrix using Matplotlib
+#
+fig, ax = graph.subplots(figsize=(5, 5))
+ax.matshow(svc_con_matrix, cmap=graph.cm.Oranges, alpha=0.3)
+for i in range(svc_con_matrix.shape[0]):
+    for j in range(svc_con_matrix.shape[1]):
+        ax.text(x=j, y=i,s=svc_con_matrix[i, j], va='center', ha='center', size='xx-large')
+ 
+graph.xlabel('Predictions', fontsize=18)
+graph.ylabel('Actuals', fontsize=18)
+graph.title('Confusion Matrix', fontsize=18)
+graph.show()
+
+evaluateModel(SVCtestlabels,svcmodelpredict)
+
+# roc curve and auc
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import roc_curve
+from sklearn.metrics import roc_auc_score
+from matplotlib import pyplot
+from sklearn.naive_bayes import GaussianNB as GNB
+
+
+# generate 2 class dataset
+GNBFeatures, GNBLabels = make_classification(n_samples=1000, n_classes=2, random_state=1)
+# split into train/test sets
+GNBtrainfeatures, GNBtestfeatures, GNBtrainlabels,GNGtestlabels = train_test_split(GNBFeatures, GNBLabels, test_size=0.5, random_state=2)
+# generate a no skill prediction (majority class)
+ns_probs = [0 for _ in range(len(GNGtestlabels))]
+# fit a model
+Nbmodel=GNB()
+Nbmodel.fit(GNBtrainfeatures, GNBtrainlabels)
+# predict probabilities
+GNB_probs = Nbmodel.predict_proba(GNBtestfeatures)
+# keep probabilities for the positive outcome only
+GNB_probs = GNB_probs[:, 1]
+# calculate scores
+svc_auc = roc_auc_score(GNGtestlabels, ns_probs)
+sv_auc = roc_auc_score(GNGtestlabels, GNB_probs)
+# summarize scores
+print('No Skill: ROC AUC=%.3f' % (svc_auc))
+print('SVC: ROC AUC=%.3f' % (sv_auc))
+# calculate roc curves
+svc_fpr, svc_tpr, _ = roc_curve(GNGtestlabels, ns_probs)
+sv_fpr, sv_tpr, _ = roc_curve(GNGtestlabels, GNB_probs)
+# plot the roc curve for the model
+pyplot.plot(svc_fpr, svc_tpr, linestyle='--', label='No Skill')
+pyplot.plot(sv_fpr, sv_tpr, marker='.', label='SVC')
+# axis labels
+pyplot.xlabel('False Positive Rate')
+pyplot.ylabel('True Positive Rate')
+# show the legend
+pyplot.legend()
+# show the plot
+pyplot.show()
+
+gnbmodelpredict = Nbmodel.predict(GNBtestfeatures)
+svc_precision,svc_recall, _ = precision_recall_curve(GNGtestlabels, GNB_probs)
+svc_f1, sv_auc = f1_score(GNGtestlabels, gnbmodelpredict), auc(svc_recall, svc_precision)
+# summarize scores
+print('GNB: f1=%.3f auc=%.3f' % (svc_f1, sv_auc))
+# plot the precision-recall curves
+no_skill = len(GNGtestlabels[GNGtestlabels==1]) / len(GNGtestlabels)
+pyplot.plot([0, 1], [no_skill, no_skill], linestyle='--', label='No Skill')
+pyplot.plot(svc_recall, svc_precision, marker='.', label='GNB')
+# axis labels
+pyplot.xlabel('Recall')
+pyplot.ylabel('Precision')
+# show the legend
+pyplot.legend()
+# show the plot
+pyplot.show()
+
+GNB_Con_matrix = confusion_matrix(y_true=GNGtestlabels, y_pred=gnbmodelpredict)
+#
+# Print the confusion matrix using Matplotlib
+#
+fig, ax = graph.subplots(figsize=(5, 5))
+ax.matshow(GNB_Con_matrix, cmap=graph.cm.Oranges, alpha=0.3)
+for i in range(GNB_Con_matrix.shape[0]):
+    for j in range(GNB_Con_matrix.shape[1]):
+        ax.text(x=j, y=i,s=GNB_Con_matrix[i, j], va='center', ha='center', size='xx-large')
+ 
+graph.xlabel('Predictions', fontsize=18)
+graph.ylabel('Actuals', fontsize=18)
+graph.title('Confusion Matrix', fontsize=18)
+graph.show()
+
+evaluateModel(GNGtestlabels,gnbmodelpredict)
+
+# roc curve and auc
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import roc_curve
+from sklearn.metrics import roc_auc_score
+from matplotlib import pyplot
+from sklearn.ensemble import RandomForestClassifier as rf
+
+
+# generate 2 class dataset
+RFCFeatures, RFCLabels = make_classification(n_samples=1000, n_classes=2, random_state=1)
+# split into train/test sets
+RFCtrainfeatures, RFCtestfeatures, RFCtrainlabels, RFCtestlabels = train_test_split(RFCFeatures, RFCLabels, test_size=0.5, random_state=2)
+# generate a no skill prediction (majority class)
+ns_probs = [0 for _ in range(len(RFCtestlabels))]
+# fit a model
+rfcmodel= rf(n_estimators=10,criterion='entropy',random_state=0)
+rfcmodel.fit(RFCtrainfeatures, RFCtrainlabels)
+# predict probabilities
+rfc_probs = rfcmodel.predict_proba(RFCtestfeatures)
+# keep probabilities for the positive outcome only
+rfc_probs = rfc_probs[:, 1]
+# calculate scores
+nrfc_auc = roc_auc_score(RFCtestlabels, ns_probs)
+rfc_auc = roc_auc_score(RFCtestlabels, rfc_probs)
+# summarize scores
+print('No Skill: ROC AUC=%.3f' % (nrfc_auc))
+print('RFC: ROC AUC=%.3f' % (rfc_auc))
+# calculate roc curves
+nrfc_fpr, nrfc_tpr, _ = roc_curve(RFCtestlabels, ns_probs)
+rfc_fpr, rfc_tpr, _ = roc_curve(RFCtestlabels, rfc_probs)
+# plot the roc curve for the model
+pyplot.plot(nrfc_fpr, nrfc_tpr, linestyle='--', label='No Skill')
+pyplot.plot(rfc_fpr, rfc_tpr, marker='.', label='RFC')
+# axis labels
+pyplot.xlabel('False Positive Rate')
+pyplot.ylabel('True Positive Rate')
+# show the legend
+pyplot.legend()
+# show the plot
+pyplot.show()
+
+RCCModelpredict = rfcmodel.predict(RFCtestfeatures)
+RFC_precision, RFC_recall, _ = precision_recall_curve(RFCtestlabels, rfc_probs)
+lr_f1, rfc_auc = f1_score(RFCtestlabels, RCCModelpredict), auc(RFC_recall, RFC_precision)
+# summarize scores
+print('RFC: f1=%.3f auc=%.3f' % (lr_f1, rfc_auc))
+# plot the precision-recall curves
+no_skill = len(RFCtestlabels[RFCtestlabels==1]) / len(RFCtestlabels)
+pyplot.plot([0, 1], [no_skill, no_skill], linestyle='--', label='No Skill')
+pyplot.plot(RFC_recall, RFC_precision, marker='.', label='Logistic')
+# axis labels
+pyplot.xlabel('Recall')
+pyplot.ylabel('Precision')
+# show the legend
+pyplot.legend()
+# show the plot
+pyplot.show()
+
+ 
+RFC_matrix = confusion_matrix(y_true=RFCtestlabels, y_pred=RCCModelpredict)
+#
+# Print the confusion matrix using Matplotlib
+#
+fig, ax = graph.subplots(figsize=(5, 5))
+ax.matshow(RFC_matrix, cmap=graph.cm.Oranges, alpha=0.3)
+for i in range(RFC_matrix.shape[0]):
+    for j in range(RFC_matrix.shape[1]):
+        ax.text(x=j, y=i,s=RFC_matrix[i, j], va='center', ha='center', size='xx-large')
+ 
+graph.xlabel('Predictions', fontsize=18)
+graph.ylabel('Actuals', fontsize=18)
+graph.title('Confusion Matrix', fontsize=18)
+graph.show()
+
+evaluateModel(RFCtestlabels,RCCModelpredict)
+
+# Proposed Algorithm
+
+class bot_url_detection(object):
+    def _init_(self):
+        pass
+
+    def splitdata(df):
+        msk = num.random.rand(len(df)) < 0.75
+        train, test = df[ms
